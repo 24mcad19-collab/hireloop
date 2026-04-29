@@ -23,12 +23,14 @@ router.get("/jobs", async (req, res) => {
   const conds: unknown[] = [eq(jobsTable.status, "open")];
 
   if (q.q) {
+    const term = `%${q.q}%`;
     conds.push(
       or(
-        ilike(jobsTable.title, `%${q.q}%`),
-        ilike(jobsTable.description, `%${q.q}%`),
-        ilike(jobsTable.tags as never, `%${q.q}%`),
-        ilike(employerProfilesTable.companyName, `%${q.q}%`),
+        ilike(jobsTable.title, term),
+        ilike(jobsTable.description, term),
+        ilike(jobsTable.location, term),
+        sql`${jobsTable.tags}::text ilike ${term}`,
+        ilike(employerProfilesTable.companyName, term),
       ),
     );
   }

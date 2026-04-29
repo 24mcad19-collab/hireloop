@@ -22,7 +22,7 @@ import {
   User,
   FileText,
 } from "lucide-react";
-import { useLogout } from "@workspace/api-client-react";
+import { useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -34,8 +34,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const logout = useLogout({
     mutation: {
       onSuccess: () => {
-        toast.success("Signed out");
+        qc.setQueryData(getGetMeQueryKey(), { user: null });
         qc.clear();
+        qc.setQueryData(getGetMeQueryKey(), { user: null });
+        toast.success("Signed out");
         setLocation("/");
       },
     },

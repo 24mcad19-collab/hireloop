@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useRegister } from "@workspace/api-client-react";
+import { useRegister, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,14 +17,13 @@ export default function RegisterPage() {
   const [companyName, setCompanyName] = useState("");
   const [, setLocation] = useLocation();
   const qc = useQueryClient();
-  const { refetch } = useAuth();
 
   const register = useRegister({
     mutation: {
-      onSuccess: () => {
-        toast.success("Account created — let's get you set up!");
+      onSuccess: (user) => {
+        qc.setQueryData(getGetMeQueryKey(), { user });
         qc.invalidateQueries();
-        refetch();
+        toast.success("Account created — let's get you set up!");
         setLocation("/profile");
       },
       onError: (err) => {

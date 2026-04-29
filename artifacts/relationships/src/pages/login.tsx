@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useLogin } from "@workspace/api-client-react";
+import { useLogin, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,14 +14,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
   const qc = useQueryClient();
-  const { refetch } = useAuth();
 
   const login = useLogin({
     mutation: {
-      onSuccess: () => {
-        toast.success("Welcome back!");
+      onSuccess: (user) => {
+        qc.setQueryData(getGetMeQueryKey(), { user });
         qc.invalidateQueries();
-        refetch();
+        toast.success("Welcome back!");
         setLocation("/dashboard");
       },
       onError: (err) => {
