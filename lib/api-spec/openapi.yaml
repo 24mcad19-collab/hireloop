@@ -2,17 +2,18 @@ openapi: 3.0.3
 info:
   title: Api
   version: 0.1.0
-  description: Relationship Tracker API
+  description: Job Listing Portal API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-  - name: workspace
-  - name: stages
-  - name: contacts
-  - name: interactions
+  - name: auth
+  - name: profile
+  - name: jobs
+  - name: applications
   - name: stats
+
 paths:
   /healthz:
     get:
@@ -27,345 +28,341 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
-  /workspace:
-    get:
-      operationId: getWorkspace
-      tags: [workspace]
-      summary: Get the single workspace configuration (relationship type + pipeline defaults)
-      responses:
-        "200":
-          description: Workspace
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Workspace"
-    put:
-      operationId: updateWorkspace
-      tags: [workspace]
-      summary: Update workspace configuration
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Create a new account
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkspaceUpdate"
+              $ref: "#/components/schemas/RegisterPayload"
+      responses:
+        "200":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Sign in to an existing account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginPayload"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Sign out
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get the currently signed-in user (or null)
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+
+  /profile/seeker:
+    get:
+      operationId: getSeekerProfile
+      tags: [profile]
+      summary: Get the current seeker's profile
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeekerProfile"
+    put:
+      operationId: updateSeekerProfile
+      tags: [profile]
+      summary: Update the current seeker's profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeekerProfileUpdate"
       responses:
         "200":
           description: Updated
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Workspace"
+                $ref: "#/components/schemas/SeekerProfile"
 
-  /workspace/initialize:
-    post:
-      operationId: initializeWorkspace
-      tags: [workspace]
-      summary: Complete first-run setup (choose relationship type + stage names)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WorkspaceInit"
-      responses:
-        "200":
-          description: Initialized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Workspace"
-
-  /stages:
+  /profile/employer:
     get:
-      operationId: listStages
-      tags: [stages]
-      summary: List pipeline stages in order
+      operationId: getEmployerProfile
+      tags: [profile]
+      summary: Get the current employer's profile
       responses:
         "200":
-          description: Stages
+          description: Profile
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Stage"
-    post:
-      operationId: createStage
-      tags: [stages]
+                $ref: "#/components/schemas/EmployerProfile"
+    put:
+      operationId: updateEmployerProfile
+      tags: [profile]
+      summary: Update the current employer's profile
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NewStage"
+              $ref: "#/components/schemas/EmployerProfileUpdate"
       responses:
         "200":
-          description: Stage
+          description: Updated
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Stage"
+                $ref: "#/components/schemas/EmployerProfile"
 
-  /stages/reorder:
-    post:
-      operationId: reorderStages
-      tags: [stages]
-      summary: Set the full order of stages
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/StageReorder"
-      responses:
-        "200":
-          description: Reordered
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Stage"
-
-  /stages/{id}:
-    patch:
-      operationId: updateStage
-      tags: [stages]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/StageUpdate"
-      responses:
-        "200":
-          description: Stage
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Stage"
-    delete:
-      operationId: deleteStage
-      tags: [stages]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "204":
-          description: Deleted
-
-  /contacts:
+  /jobs:
     get:
-      operationId: listContacts
-      tags: [contacts]
+      operationId: listJobs
+      tags: [jobs]
+      summary: Search and list job postings
       parameters:
-        - name: search
-          in: query
-          required: false
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: location
+          schema: { type: string }
+        - in: query
+          name: jobType
           schema:
-            type: string
-        - name: stageId
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: tag
-          in: query
-          required: false
-          schema:
-            type: string
+            $ref: "#/components/schemas/JobType"
+        - in: query
+          name: minSalary
+          schema: { type: integer, minimum: 0 }
+        - in: query
+          name: featured
+          schema: { type: boolean }
       responses:
         "200":
-          description: Contacts
+          description: Jobs
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Contact"
+                  $ref: "#/components/schemas/JobSummary"
     post:
-      operationId: createContact
-      tags: [contacts]
+      operationId: createJob
+      tags: [jobs]
+      summary: Create a new job posting (employer only)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NewContact"
+              $ref: "#/components/schemas/JobCreate"
       responses:
         "200":
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Contact"
+                $ref: "#/components/schemas/Job"
 
-  /contacts/{id}:
+  /jobs/{id}:
     get:
-      operationId: getContact
-      tags: [contacts]
+      operationId: getJob
+      tags: [jobs]
       parameters:
-        - name: id
-          in: path
+        - in: path
+          name: id
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         "200":
-          description: Contact
+          description: Job
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Contact"
+                $ref: "#/components/schemas/Job"
     patch:
-      operationId: updateContact
-      tags: [contacts]
+      operationId: updateJob
+      tags: [jobs]
       parameters:
-        - name: id
-          in: path
+        - in: path
+          name: id
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ContactUpdate"
+              $ref: "#/components/schemas/JobUpdate"
       responses:
         "200":
-          description: Contact
+          description: Updated
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Contact"
+                $ref: "#/components/schemas/Job"
     delete:
-      operationId: deleteContact
-      tags: [contacts]
+      operationId: deleteJob
+      tags: [jobs]
       parameters:
-        - name: id
-          in: path
+        - in: path
+          name: id
           required: true
-          schema:
-            type: string
-      responses:
-        "204":
-          description: Deleted
-
-  /contacts/{id}/interactions:
-    get:
-      operationId: listInteractions
-      tags: [interactions]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         "200":
-          description: Interactions
+          description: Deleted
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Interaction"
+                $ref: "#/components/schemas/OkResponse"
+
+  /jobs/{id}/apply:
     post:
-      operationId: createInteraction
-      tags: [interactions]
+      operationId: applyToJob
+      tags: [applications]
       parameters:
-        - name: id
-          in: path
+        - in: path
+          name: id
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NewInteraction"
+              $ref: "#/components/schemas/ApplyBody"
       responses:
         "200":
-          description: Created
+          description: Applied
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Interaction"
+                $ref: "#/components/schemas/Application"
 
-  /interactions/{id}:
-    delete:
-      operationId: deleteInteraction
-      tags: [interactions]
+  /jobs/{id}/applications:
+    get:
+      operationId: listJobApplications
+      tags: [applications]
+      summary: List applications for a job (employer owner only)
       parameters:
-        - name: id
-          in: path
+        - in: path
+          name: id
           required: true
-          schema:
-            type: string
-      responses:
-        "204":
-          description: Deleted
-
-  /tags:
-    get:
-      operationId: listTags
-      tags: [stats]
-      summary: All unique tags with usage counts
+          schema: { type: string }
       responses:
         "200":
-          description: Tags
+          description: Applications
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/TagCount"
+                  $ref: "#/components/schemas/ApplicationWithSeeker"
 
-  /stats/summary:
+  /employer/jobs:
     get:
-      operationId: getSummary
-      tags: [stats]
-      summary: Top-level counts and recent activity
+      operationId: listMyJobs
+      tags: [jobs]
+      summary: List the current employer's job postings
       responses:
         "200":
-          description: Summary
+          description: Jobs
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Summary"
+                type: array
+                items:
+                  $ref: "#/components/schemas/JobWithCounts"
 
-  /activity/recent:
+  /seeker/applications:
     get:
-      operationId: recentActivity
-      tags: [stats]
-      summary: Latest interactions across all contacts
+      operationId: listMyApplications
+      tags: [applications]
+      summary: List the current seeker's applications
+      responses:
+        "200":
+          description: Applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationWithJob"
+
+  /applications/{id}:
+    patch:
+      operationId: updateApplication
+      tags: [applications]
+      summary: Update an application status (employer only)
       parameters:
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationUpdate"
       responses:
         "200":
-          description: Activity
+          description: Updated
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ActivityItem"
+                $ref: "#/components/schemas/Application"
+
+  /stats/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [stats]
+      summary: Aggregated dashboard stats for the current user
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
 
 components:
   schemas:
@@ -375,264 +372,311 @@ components:
       properties:
         status:
           type: string
+          enum: [ok]
 
-    Workspace:
+    OkResponse:
       type: object
-      required: [id, initialized, relationshipType, entityLabel, entityLabelPlural, affiliationLabel, createdAt]
+      required: [ok]
       properties:
-        id:
-          type: string
-        initialized:
+        ok:
           type: boolean
-        relationshipType:
-          type: string
-          description: One of 'sales', 'clients', 'investors', 'candidates', 'personal', 'custom'
-        entityLabel:
-          type: string
-          description: Singular label for a contact (e.g. 'Lead', 'Client')
-        entityLabelPlural:
-          type: string
-        affiliationLabel:
-          type: string
-          description: Label used for company/affiliation field
-        createdAt:
-          type: string
-          format: date-time
 
-    WorkspaceUpdate:
-      type: object
-      properties:
-        relationshipType:
-          type: string
-        entityLabel:
-          type: string
-        entityLabelPlural:
-          type: string
-        affiliationLabel:
-          type: string
+    UserRole:
+      type: string
+      enum: [seeker, employer]
 
-    WorkspaceInit:
+    JobType:
+      type: string
+      enum: [full_time, part_time, contract, internship, temporary]
+
+    ApplicationStatus:
+      type: string
+      enum: [pending, reviewing, interview, accepted, rejected]
+
+    AuthUser:
       type: object
-      required: [relationshipType, entityLabel, entityLabelPlural, affiliationLabel, stageNames]
+      required: [id, email, role, createdAt]
       properties:
-        relationshipType:
-          type: string
-        entityLabel:
-          type: string
-        entityLabelPlural:
-          type: string
-        affiliationLabel:
-          type: string
-        stageNames:
+        id: { type: string }
+        email: { type: string }
+        role: { $ref: "#/components/schemas/UserRole" }
+        createdAt: { type: string, format: date-time }
+
+    MeResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          allOf:
+            - $ref: "#/components/schemas/AuthUser"
+          nullable: true
+
+    RegisterPayload:
+      type: object
+      required: [email, password, role]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 6 }
+        role: { $ref: "#/components/schemas/UserRole" }
+        fullName: { type: string }
+        companyName: { type: string }
+
+    LoginPayload:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+
+    SeekerProfile:
+      type: object
+      required: [userId, fullName, headline, location, phone, bio, resumeUrl, skills, updatedAt]
+      properties:
+        userId: { type: string }
+        fullName: { type: string }
+        headline: { type: string }
+        location: { type: string }
+        phone: { type: string }
+        bio: { type: string }
+        resumeUrl: { type: string }
+        skills:
           type: array
-          items:
-            type: string
+          items: { type: string }
+        updatedAt: { type: string, format: date-time }
 
-    Stage:
-      type: object
-      required: [id, name, position, color, createdAt]
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        position:
-          type: integer
-        color:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-
-    NewStage:
-      type: object
-      required: [name]
-      properties:
-        name:
-          type: string
-        color:
-          type: string
-
-    StageUpdate:
+    SeekerProfileUpdate:
       type: object
       properties:
-        name:
-          type: string
-        color:
-          type: string
-
-    StageReorder:
-      type: object
-      required: [ids]
-      properties:
-        ids:
+        fullName: { type: string }
+        headline: { type: string }
+        location: { type: string }
+        phone: { type: string }
+        bio: { type: string }
+        resumeUrl: { type: string }
+        skills:
           type: array
-          items:
-            type: string
+          items: { type: string }
 
-    Contact:
+    EmployerProfile:
       type: object
-      required: [id, name, tags, createdAt, updatedAt]
+      required: [userId, companyName, website, industry, location, description, logoUrl, updatedAt]
       properties:
-        id:
-          type: string
-        name:
-          type: string
-        affiliation:
-          type: string
-          nullable: true
-        email:
-          type: string
-          nullable: true
-        phone:
-          type: string
-          nullable: true
-        stageId:
-          type: string
-          nullable: true
+        userId: { type: string }
+        companyName: { type: string }
+        website: { type: string }
+        industry: { type: string }
+        location: { type: string }
+        description: { type: string }
+        logoUrl: { type: string }
+        updatedAt: { type: string, format: date-time }
+
+    EmployerProfileUpdate:
+      type: object
+      properties:
+        companyName: { type: string }
+        website: { type: string }
+        industry: { type: string }
+        location: { type: string }
+        description: { type: string }
+        logoUrl: { type: string }
+
+    JobCreate:
+      type: object
+      required: [title, description, location, jobType]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        qualifications: { type: string }
+        responsibilities: { type: string }
+        location: { type: string }
+        jobType: { $ref: "#/components/schemas/JobType" }
+        salaryMin: { type: integer, minimum: 0 }
+        salaryMax: { type: integer, minimum: 0 }
+        currency: { type: string }
         tags:
           type: array
-          items:
-            type: string
-        notes:
-          type: string
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+          items: { type: string }
 
-    NewContact:
+    JobUpdate:
       type: object
-      required: [name]
       properties:
-        name:
-          type: string
-        affiliation:
-          type: string
-          nullable: true
-        email:
-          type: string
-          nullable: true
-        phone:
-          type: string
-          nullable: true
-        stageId:
-          type: string
-          nullable: true
+        title: { type: string }
+        description: { type: string }
+        qualifications: { type: string }
+        responsibilities: { type: string }
+        location: { type: string }
+        jobType: { $ref: "#/components/schemas/JobType" }
+        salaryMin: { type: integer, minimum: 0 }
+        salaryMax: { type: integer, minimum: 0 }
+        currency: { type: string }
         tags:
           type: array
-          items:
-            type: string
-        notes:
+          items: { type: string }
+        status:
           type: string
-          nullable: true
+          enum: [open, closed]
 
-    ContactUpdate:
+    JobSummary:
       type: object
+      required: [id, title, location, jobType, salaryMin, salaryMax, currency, tags, status, createdAt, companyName, companyLogoUrl]
       properties:
-        name:
-          type: string
-        affiliation:
-          type: string
-          nullable: true
-        email:
-          type: string
-          nullable: true
-        phone:
-          type: string
-          nullable: true
-        stageId:
-          type: string
-          nullable: true
+        id: { type: string }
+        title: { type: string }
+        location: { type: string }
+        jobType: { $ref: "#/components/schemas/JobType" }
+        salaryMin: { type: integer }
+        salaryMax: { type: integer }
+        currency: { type: string }
         tags:
           type: array
-          items:
-            type: string
-        notes:
-          type: string
-          nullable: true
+          items: { type: string }
+        status: { type: string, enum: [open, closed] }
+        createdAt: { type: string, format: date-time }
+        companyName: { type: string }
+        companyLogoUrl: { type: string }
 
-    Interaction:
+    Job:
       type: object
-      required: [id, contactId, kind, body, occurredAt, createdAt]
+      required:
+        [
+          id,
+          employerId,
+          title,
+          description,
+          qualifications,
+          responsibilities,
+          location,
+          jobType,
+          salaryMin,
+          salaryMax,
+          currency,
+          tags,
+          status,
+          createdAt,
+          updatedAt,
+          companyName,
+          companyLogoUrl,
+          companyWebsite,
+          companyIndustry,
+          companyDescription,
+        ]
       properties:
-        id:
-          type: string
-        contactId:
-          type: string
-        kind:
-          type: string
-          description: "One of note, call, meeting, email"
-        body:
-          type: string
-        occurredAt:
-          type: string
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-
-    NewInteraction:
-      type: object
-      required: [kind, body]
-      properties:
-        kind:
-          type: string
-        body:
-          type: string
-        occurredAt:
-          type: string
-          format: date-time
-
-    TagCount:
-      type: object
-      required: [tag, count]
-      properties:
-        tag:
-          type: string
-        count:
-          type: integer
-
-    Summary:
-      type: object
-      required: [totalContacts, contactsThisWeek, interactionsThisWeek, byStage]
-      properties:
-        totalContacts:
-          type: integer
-        contactsThisWeek:
-          type: integer
-        interactionsThisWeek:
-          type: integer
-        byStage:
+        id: { type: string }
+        employerId: { type: string }
+        title: { type: string }
+        description: { type: string }
+        qualifications: { type: string }
+        responsibilities: { type: string }
+        location: { type: string }
+        jobType: { $ref: "#/components/schemas/JobType" }
+        salaryMin: { type: integer }
+        salaryMax: { type: integer }
+        currency: { type: string }
+        tags:
           type: array
-          items:
-            type: object
-            required: [stageId, stageName, count]
-            properties:
-              stageId:
-                type: string
-              stageName:
-                type: string
-              count:
-                type: integer
+          items: { type: string }
+        status: { type: string, enum: [open, closed] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        companyName: { type: string }
+        companyLogoUrl: { type: string }
+        companyWebsite: { type: string }
+        companyIndustry: { type: string }
+        companyDescription: { type: string }
 
-    ActivityItem:
+    JobWithCounts:
       type: object
-      required: [id, contactId, contactName, kind, body, occurredAt]
+      required: [id, title, location, jobType, status, createdAt, applicationCount]
       properties:
-        id:
-          type: string
-        contactId:
-          type: string
-        contactName:
-          type: string
-        kind:
-          type: string
-        body:
-          type: string
-        occurredAt:
-          type: string
-          format: date-time
+        id: { type: string }
+        title: { type: string }
+        location: { type: string }
+        jobType: { $ref: "#/components/schemas/JobType" }
+        salaryMin: { type: integer }
+        salaryMax: { type: integer }
+        currency: { type: string }
+        status: { type: string, enum: [open, closed] }
+        createdAt: { type: string, format: date-time }
+        applicationCount: { type: integer }
+
+    ApplyBody:
+      type: object
+      required: [coverLetter]
+      properties:
+        coverLetter: { type: string }
+        resumeUrl: { type: string }
+
+    Application:
+      type: object
+      required: [id, jobId, seekerId, coverLetter, resumeUrl, status, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        jobId: { type: string }
+        seekerId: { type: string }
+        coverLetter: { type: string }
+        resumeUrl: { type: string }
+        status: { $ref: "#/components/schemas/ApplicationStatus" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ApplicationWithJob:
+      type: object
+      required:
+        [id, jobId, status, coverLetter, createdAt, jobTitle, companyName, location, jobType]
+      properties:
+        id: { type: string }
+        jobId: { type: string }
+        status: { $ref: "#/components/schemas/ApplicationStatus" }
+        coverLetter: { type: string }
+        createdAt: { type: string, format: date-time }
+        jobTitle: { type: string }
+        companyName: { type: string }
+        location: { type: string }
+        jobType: { $ref: "#/components/schemas/JobType" }
+
+    ApplicationWithSeeker:
+      type: object
+      required:
+        [
+          id,
+          jobId,
+          status,
+          coverLetter,
+          resumeUrl,
+          createdAt,
+          seekerEmail,
+          seekerName,
+          seekerHeadline,
+          seekerLocation,
+          seekerSkills,
+        ]
+      properties:
+        id: { type: string }
+        jobId: { type: string }
+        status: { $ref: "#/components/schemas/ApplicationStatus" }
+        coverLetter: { type: string }
+        resumeUrl: { type: string }
+        createdAt: { type: string, format: date-time }
+        seekerEmail: { type: string }
+        seekerName: { type: string }
+        seekerHeadline: { type: string }
+        seekerLocation: { type: string }
+        seekerSkills:
+          type: array
+          items: { type: string }
+
+    ApplicationUpdate:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/ApplicationStatus" }
+
+    DashboardStats:
+      type: object
+      required: [role, totalJobs, totalApplications, openJobs, recentActivityCount]
+      properties:
+        role: { $ref: "#/components/schemas/UserRole" }
+        totalJobs: { type: integer }
+        totalApplications: { type: integer }
+        openJobs: { type: integer }
+        recentActivityCount: { type: integer }

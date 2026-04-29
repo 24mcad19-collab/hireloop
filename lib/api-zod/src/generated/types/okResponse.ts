@@ -5,8 +5,7 @@
  * Job Listing Portal API
  * OpenAPI spec version: 0.1.0
  */
-import type { HealthStatusStatus } from "./healthStatusStatus";
 
-export interface HealthStatus {
-  status: HealthStatusStatus;
+export interface OkResponse {
+  ok: boolean;
 }
